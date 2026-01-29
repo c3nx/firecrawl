@@ -1,8 +1,13 @@
 import express, { Request, Response } from 'express';
-import { chromium, Browser, BrowserContext, Route, Request as PlaywrightRequest, Page } from 'playwright';
+import { chromium } from 'playwright-extra';
+import StealthPlugin from 'puppeteer-extra-plugin-stealth';
+import { Browser, BrowserContext, Route, Request as PlaywrightRequest, Page } from 'playwright';
 import dotenv from 'dotenv';
 import UserAgent from 'user-agents';
 import { getError } from './helpers/get_error';
+
+// Enable stealth mode to bypass anti-bot detection
+chromium.use(StealthPlugin());
 
 dotenv.config();
 
@@ -94,19 +99,35 @@ const initializeBrowser = async () => {
       '--disable-accelerated-2d-canvas',
       '--no-first-run',
       '--no-zygote',
-      '--disable-gpu'
+      '--disable-gpu',
+      '--disable-blink-features=AutomationControlled',
+      '--disable-features=IsolateOrigins,site-per-process',
+      '--window-size=1920,1080'
     ]
   });
+  console.log('🛡️ Browser launched with stealth mode enabled');
 };
 
+const VIEWPORT_SIZES = [
+  { width: 1920, height: 1080 },
+  { width: 1366, height: 768 },
+  { width: 1536, height: 864 },
+  { width: 1440, height: 900 },
+  { width: 1280, height: 720 },
+];
+
 const createContext = async (skipTlsVerification: boolean = false) => {
-  const userAgent = new UserAgent().toString();
-  const viewport = { width: 1280, height: 800 };
+  const userAgent = new UserAgent({ deviceCategory: 'desktop' }).toString();
+  const viewport = VIEWPORT_SIZES[Math.floor(Math.random() * VIEWPORT_SIZES.length)];
 
   const contextOptions: any = {
     userAgent,
     viewport,
     ignoreHTTPSErrors: skipTlsVerification,
+    locale: 'en-US',
+    timezoneId: 'Europe/Istanbul',
+    permissions: ['geolocation'],
+    colorScheme: 'light',
   };
 
   if (PROXY_SERVER && PROXY_USERNAME && PROXY_PASSWORD) {
@@ -204,8 +225,9 @@ app.get('/health', async (req: Request, res: Response) => {
     await testPage.close();
     await testContext.close();
     
-    res.status(200).json({ 
+    res.status(200).json({
       status: 'healthy',
+      stealth: true,
       maxConcurrentPages: MAX_CONCURRENT_PAGES,
       activePages: MAX_CONCURRENT_PAGES - pageSemaphore.getAvailablePermits()
     });
