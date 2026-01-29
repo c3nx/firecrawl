@@ -70,7 +70,11 @@ services:
       # Configure maximum concurrent pages for Playwright browser instances
       MAX_CONCURRENT_PAGES: ${CRAWL_CONCURRENT_REQUESTS:-10}
     networks:
-      - backend
+      firecrawl-lan:
+        ipv4_address: 192.168.1.76
+        priority: 1000
+      backend:
+        priority: 500
     # Resource limits for Docker Compose (not Swarm)
     cpus: 2.0
     mem_limit: 4G
@@ -86,6 +90,12 @@ services:
 
   api:
     <<: *common-service
+    networks:
+      firecrawl-lan:
+        ipv4_address: 192.168.1.75
+        priority: 1000
+      backend:
+        priority: 500
     environment:
       <<: *common-env
       HOST: "0.0.0.0"
@@ -161,5 +171,7 @@ services:
         compress: "true"
 
 networks:
+  firecrawl-lan:
+    external: true
   backend:
     driver: bridge
