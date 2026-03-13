@@ -111,8 +111,8 @@ services:
         condition: service_started
       rabbitmq:
         condition: service_healthy
-    ports:
-      - "${PORT:-3002}:${INTERNAL_PORT:-3002}"
+    expose:
+      - "${INTERNAL_PORT:-3002}"
     command: node dist/src/harness.js --start-docker
     # Resource limits for Docker Compose (not Swarm)
     # Increase if you have more CPU cores/RAM available
@@ -163,12 +163,17 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-postgres}
     networks:
       - backend
+    volumes:
+      - nuq-pgdata:/var/lib/postgresql/data
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "3"
         compress: "true"
+
+volumes:
+  nuq-pgdata:
 
 networks:
   firecrawl-lan:
